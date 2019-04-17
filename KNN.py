@@ -1,17 +1,19 @@
 import random
 import numpy as np
 import collections
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
 VALIDATION_PERCENTAGE = 0.1
 TEST_PERCENTAGE = 0.2
 NUMBER_OF_FOLDS = 5
 
-
 class KNN:
 
     def __init__(self, dataset_name):
         self.dataset_name = dataset_name
+
 
     def load_data(self):
 
@@ -32,6 +34,7 @@ class KNN:
 
             self.dataset = dataset
 
+
     def split_train_test_validation(self):
 
         random.shuffle(self.dataset)
@@ -41,12 +44,13 @@ class KNN:
         self.k_folds_database = self.dataset[:validation_index]
         self.validation = self.dataset[validation_index:]
 
-    def train(self, number_of_epochs):
+
+    def train(self, number_of_realizations):
 
         accuracies = []
         k_values = []
 
-        for realization in range(1, number_of_epochs):
+        for realization in range(1, number_of_realizations):
 
             k_accuracy = {}
 
@@ -107,7 +111,11 @@ class KNN:
             k_values.append(self.best_k)
 
         print("The best K is %s" % max(set(k_values), key=k_values.count))
+
         self.plot_graphs(range(len(accuracies)), accuracies)
+
+        return np.average(accuracies), np.std(accuracies)
+
 
     def test(self):
 
@@ -142,7 +150,8 @@ class KNN:
     def plot_graphs(self, X, Y):
 
         plt.plot(X, Y)
-        # plt.xticks(list(X))
+        plt.interactive(False)
+        plt.xticks(list(X))
         plt.xlabel('Realizações')
         plt.ylabel('Acurácia')
         plt.title(self.dataset_name)
