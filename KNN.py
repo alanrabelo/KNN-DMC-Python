@@ -32,6 +32,18 @@ class KNN:
                 input[-1] = list(categories).index(input[-1])
                 dataset.append(input)
 
+            normalized_dataset = np.array(dataset)
+
+            number_of_columns = len(dataset[0])
+            for column in range(number_of_columns - 1):
+                current_column = normalized_dataset[:, column]
+                max_of_column = float(max(current_column))
+                min_of_column = float(min(current_column))
+
+                for index in range(len(dataset)):
+                    value = dataset[index][column]
+                    dataset[index][column] = (float(value) - min_of_column) / (max_of_column - min_of_column)
+
             self.dataset = dataset
 
 
@@ -68,23 +80,23 @@ class KNN:
                     TRAIN = np.array(list(dataset[:start_index, :]) + list(dataset[final_index:, :]))
                     TEST = dataset[start_index: final_index, :]
 
-                    train_X = np.array(TRAIN, dtype=float)[:, :-1]
-                    train_Y = np.array(TRAIN, dtype=float)[:, -1]
-                    test_X = np.array(TEST, dtype=float)[:, :-1]
-                    test_Y = np.array(TEST, dtype=float)[:, -1]
+                    self.train_X = np.array(TRAIN, dtype=float)[:, :2]
+                    self.train_Y = np.array(TRAIN, dtype=float)[:, -1]
+                    self.test_X = np.array(TEST, dtype=float)[:, :2]
+                    self.test_Y = np.array(TEST, dtype=float)[:, -1]
 
                     number_of_corrects = 0
                     number_of_errors = 0
 
-                    for index, input in enumerate(test_X):
+                    for index, input in enumerate(self.test_X):
 
-                        desired = test_Y[index]
+                        desired = self.test_Y[index]
 
                         Ap = input  # "lowest point"
-                        B = train_X  # sample array of points
+                        B = self.train_X  # sample array of points
                         dist = np.linalg.norm(B - Ap, ord=2,
                                               axis=1)  # calculate Euclidean distance (2-norm of difference vectors)
-                        sorted_B = train_Y[np.argsort(dist)]
+                        sorted_B = self.train_Y[np.argsort(dist)]
                         closer_numbers = list(sorted_B)[:k]
 
                         counter = collections.Counter(closer_numbers)
@@ -107,7 +119,8 @@ class KNN:
 
             self.best_k = sorted(k_accuracy, key=k_accuracy.get, reverse=False)[0]
 
-            accuracies.append(self.test())
+            should_show_decision_surface = True if realization == 10 else False
+            accuracies.append(self.test(should_show_decision_surface=should_show_decision_surface))
             k_values.append(self.best_k)
 
         print("The best K is %s" % max(set(k_values), key=k_values.count))
@@ -117,9 +130,9 @@ class KNN:
         return np.average(accuracies), np.std(accuracies)
 
 
-    def test(self):
+    def test(self, should_show_decision_surface=False):
 
-        validation_X = np.array(self.validation, dtype=float)[:, :-1]
+        validation_X = np.array(self.validation, dtype=float)[:, :2]
         validation_Y = np.array(self.validation, dtype=float)[:, -1]
 
         number_of_corrects = 0
@@ -130,10 +143,10 @@ class KNN:
             desired = validation_Y[index]
 
             Ap = input  # "lowest point"
-            B = validation_X  # sample array of points
+            B = self.train_X  # sample array of points
             dist = np.linalg.norm(B - Ap, ord=2,
                                   axis=1)  # calculate Euclidean distance (2-norm of difference vectors)
-            sorted_B = validation_Y[np.argsort(dist)]
+            sorted_B = self.train_Y[np.argsort(dist)]
             closer_numbers = list(sorted_B)[:self.best_k]
 
             counter = collections.Counter(closer_numbers)
@@ -147,8 +160,65 @@ class KNN:
         return number_of_corrects / (number_of_corrects + number_of_errors)
 
 
+    def predict(self, input):
+
+        Ap = input  # "lowest point"
+        B = self.train_X  # sample array of points
+        dist = np.linalg.norm(B - Ap, ord=2,
+                              axis=1)  # calculate Euclidean distance (2-norm of difference vectors)
+        sorted_B = self.train_Y[np.argsort(dist)]
+        closer_numbers = list(sorted_B)[:self.best_k]
+
+        counter = collections.Counter(closer_numbers)
+        closer = counter.most_common(1)[0][0]
+
+        return closer
+
+    def plot_decision_surface(self):
+
+        # parameter_combination = list(itertools.combinations(range(len(list(X[0]))), 2))
+
+        clear_red = "#FFA07A"
+        clear_blue = "#B0E0E6"
+        clear_green = "#98FB98"
+
+        colors = [clear_red, clear_blue, clear_green]
+        strong_colors = ['red', 'blue', '#2ECC71']
+
+        for i in range(0, 100, 1):
+            for j in range(0, 100, 1):
+
+                x = i/100
+                y = j/100
+                value = int(self.predict([x, y]))
+
+                color = colors[value]
+
+                plt.plot([x], [y], 'ro', color=color)
+
+
+        for index, input in enumerate(self.test_X):
+
+            color_value = int(self.predict(input))
+            plt.plot(input[0], input[1], 'ro', color=strong_colors[color_value])
+
+
+        medium_colors = ['#641E16', '#1B4F72', '#186A3B']
+
+        for index, input in enumerate(self.train_X):
+
+            color_value = int(self.predict(input))
+            plt.plot(input[0], input[1], 'ro', color=medium_colors[color_value])
+
+
+
+
+
+        plt.show()
+
     def plot_graphs(self, X, Y):
 
+        print("Nada")
         plt.plot(X, Y)
         plt.interactive(False)
         plt.xticks(list(X))

@@ -2,8 +2,12 @@
 import random
 import numpy as np
 import collections
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import itertools
+
+
 
 number_of_executions = 10
 
@@ -68,9 +72,9 @@ def read_database(dataset_name):
 
         train = dataset[:initial_point] + dataset[final_point:]
 
-        train_x = np.array(train, dtype=float)[:, :-1]
+        train_x = np.array(train, dtype=float)[:, :2]
         train_y = np.array(train, dtype=float)[:, -1]
-        test_x = np.array(test, dtype=float)[:, :-1]
+        test_x = np.array(test, dtype=float)[:, :2]
         test_y = np.array(test, dtype=float)[:, -1]
 
         return train_x, train_y, test_x, test_y, np.array(dataset, dtype=float)[:, :-1],  np.array(dataset, dtype=float)[:, -1]
@@ -152,41 +156,79 @@ class DMC:
         return closest_key
 
 
-    def plot_decision_surface(self):
+    def plot_decision_surface(self, train_x, train_y, test_x, test_y):
 
-        parameter_combination = list(itertools.combinations(range(len(list(X[0]))), 2))
+        # parameter_combination = list(itertools.combinations(range(len(list(X[0]))), 2))
 
-        for parameter in parameter_combination:
+        clear_red = "#FFA07A"
+        clear_blue = "#B0E0E6"
+        clear_green = "#98FB98"
 
-            background_arrange = np.arange(0, 1, 0.1)
-            print(list(itertools.combinations(background_arrange, 2)))
+        colors = [clear_red, clear_blue, clear_green]
+        strong_colors = ['red', 'blue', '#2ECC71']
+
+        for i in range(0, 100, 1):
+            for j in range(0, 100, 1):
+
+                x = i/100
+                y = j/100
+                value = int(self.predict([x, y]))
+
+                color = colors[value]
+
+                plt.plot([x], [y], 'ro', color=color)
+
+
+        for index, input in enumerate(test_x):
+
+            color_value = int(self.predict(input))
+            plt.plot(input[0], input[1], 'ro', color=strong_colors[color_value])
+
+
+        medium_colors = ['#641E16', '#1B4F72', '#186A3B']
+
+        for index, input in enumerate(train_x):
+
+            color_value = int(self.predict(input))
+            plt.plot(input[0], input[1], 'ro', color=medium_colors[color_value])
 
 
 
-            fig_size = plt.rcParams["figure.figsize"]
-            fig_size[0] = 7
-            fig_size[1] = 7
-            plt.rcParams["figure.figsize"] = fig_size
 
-            for index, value in enumerate(self.X):
 
-                colors = ['ro', 'bo', 'go']
+        plt.show()
 
-                # for index, key in enumerate(dataset_dict):
-
-                input = np.array(value)
-                y = np.array(self.Y)[index]
-
-                firstInput = input[parameter[0]]
-                secondInput = input[parameter[1]]
-
-                plt.plot(firstInput, secondInput, colors[int(y)])
-
-            plt.xlabel('Superficie de Decisão')
-            # plt.ylabel('Acurácia (%)')
-            import uuid
-            plt.savefig(str(uuid.uuid4()))
-            plt.close()
+        # for parameter in [parameter_combination[0]]:
+        #
+        #     background_arrange = np.arange(0, 1, 0.1)
+        #     print(list(itertools.combinations(background_arrange, 2)))
+        #
+        #
+        #
+        #     fig_size = plt.rcParams["figure.figsize"]
+        #     fig_size[0] = 7
+        #     fig_size[1] = 7
+        #     plt.rcParams["figure.figsize"] = fig_size
+        #
+        #     for index, value in enumerate(self.X):
+        #
+        #         colors = ['ro', 'bo', 'go']
+        #
+        #         # for index, key in enumerate(dataset_dict):
+        #
+        #         input = np.array(value)
+        #         y = np.array(self.Y)[index]
+        #
+        #         firstInput = input[parameter[0]]
+        #         secondInput = input[parameter[1]]
+        #
+        #         plt.plot(firstInput, secondInput, colors[int(y)])
+        #
+        #     plt.xlabel('Superficie de Decisão')
+        #     # plt.ylabel('Acurácia (%)')
+        #     import uuid
+        #     plt.show()
+        #     plt.close()
 
 
 datasets = ['Datasets/iris.data', 'Datasets/column.arff']
@@ -204,6 +246,8 @@ for dataset in datasets:
         dmc = DMC(X, Y)
 
         dmc.fit(train_x, train_y)
+
+        dmc.plot_decision_surface(train_x, train_y, test_x, test_y)
 
         if not ploted:
             ploted = True
