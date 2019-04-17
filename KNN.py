@@ -2,7 +2,6 @@ import random
 import numpy as np
 import collections
 import matplotlib
-matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
 VALIDATION_PERCENTAGE = 0.1
@@ -32,7 +31,7 @@ class KNN:
                 input[-1] = list(categories).index(input[-1])
                 dataset.append(input)
 
-            normalized_dataset = np.array(dataset)
+            normalized_dataset = np.array(dataset, dtype=float)
 
             number_of_columns = len(dataset[0])
             for column in range(number_of_columns - 1):
@@ -69,7 +68,7 @@ class KNN:
             self.split_train_test_validation()
             NUMBER_OF_ELEMENTS_IN_FOLD = len(self.k_folds_database) / float(NUMBER_OF_FOLDS)
 
-            for k in range(1,15, 2):
+            for k in range(3,5, 2):
 
                 for index in range(0,4):
 
@@ -88,9 +87,11 @@ class KNN:
                     number_of_corrects = 0
                     number_of_errors = 0
 
+                    confusion_matrix = {}
+
                     for index, input in enumerate(self.test_X):
 
-                        desired = self.test_Y[index]
+                        desired = int(self.test_Y[index])
 
                         Ap = input  # "lowest point"
                         B = self.train_X  # sample array of points
@@ -100,12 +101,20 @@ class KNN:
                         closer_numbers = list(sorted_B)[:k]
 
                         counter = collections.Counter(closer_numbers)
-                        closer = counter.most_common(1)[0][0]
+                        closer = int(counter.most_common(1)[0][0])
 
                         if desired - closer == 0:
                             number_of_corrects += 1
                         else:
                             number_of_errors += 1
+
+                        if desired in confusion_matrix:
+                            if closer in confusion_matrix[desired]:
+                                confusion_matrix[desired][closer] += 1
+                            else:
+                                confusion_matrix[desired][closer] = 1
+                        else:
+                            confusion_matrix[desired] = {closer: 1}
 
                     accuracy_in_realization_with_k = number_of_corrects/(number_of_corrects + number_of_errors)
 
@@ -185,11 +194,12 @@ class KNN:
         colors = [clear_red, clear_blue, clear_green]
         strong_colors = ['red', 'blue', '#2ECC71']
 
-        for i in range(0, 100, 1):
-            for j in range(0, 100, 1):
+        number_of_points = 100
+        for i in range(0, number_of_points, 1):
+            for j in range(0, number_of_points, 1):
 
-                x = i/100
-                y = j/100
+                x = i/number_of_points
+                y = j/number_of_points
                 value = int(self.predict([x, y]))
 
                 color = colors[value]
@@ -218,11 +228,11 @@ class KNN:
 
     def plot_graphs(self, X, Y):
 
-        print("Nada")
-        plt.plot(X, Y)
-        plt.interactive(False)
-        plt.xticks(list(X))
-        plt.xlabel('Realizações')
-        plt.ylabel('Acurácia')
+
+        # plt.plot(X, Y)
+        # plt.interactive(False)
+        # plt.xticks(list(X))
+        # plt.xlabel('Realizações')
+        # plt.ylabel('Acurácia')
         plt.title(self.dataset_name)
-        plt.show()
+        # plt.show()

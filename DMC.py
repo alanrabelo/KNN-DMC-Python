@@ -3,13 +3,12 @@ import random
 import numpy as np
 import collections
 import matplotlib
-matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import itertools
 
 
 
-number_of_executions = 10
+number_of_executions = 1
 
 def euclideanDistance(instance1, instance2):
 
@@ -24,78 +23,64 @@ def intersection(lst1, lst2):
     lst3 = [list(filter(lambda x: x not in lst1, sublist)) for sublist in lst2]
     return lst3
 
-def read_database(dataset_name):
-
-    with open(dataset_name) as f:
-
-        dataset = []
-        categories = []
-
-        for line in f.readlines():
-
-            input = line.replace("?", str(0)).split(",")
-
-            if input[-1] not in categories:
-                categories.append(input[-1])
-
-            input[-1] = list(categories).index(input[-1])
-            dataset.append(input)
-
-
-
-
-        if dataset_name == 'Datasets/breast-cancer.data':
-            dataset = list(np.array(dataset)[:, 1:])
-
-        normalized_dataset = np.array(dataset)
-
-        number_of_columns = len(dataset[0])
-        for column in range(number_of_columns - 1):
-            current_column = normalized_dataset[:, column]
-            max_of_column = float(max(current_column))
-            min_of_column = float(min(current_column))
-
-            for index in range(len(dataset)):
-                value = dataset[index][column]
-                dataset[index][column] = (float(value) - min_of_column) / (max_of_column - min_of_column)
-
-        random.shuffle(dataset)
-        number_of_folds = 5
-
-
-        initial_point = int(0 * 0.1)
-        final_point = initial_point + round(len(dataset) * (1.0 / number_of_folds))
-
-
-
-        test = dataset[initial_point: final_point]
-
-        train = dataset[:initial_point] + dataset[final_point:]
-
-        train_x = np.array(train, dtype=float)[:, :2]
-        train_y = np.array(train, dtype=float)[:, -1]
-        test_x = np.array(test, dtype=float)[:, :2]
-        test_y = np.array(test, dtype=float)[:, -1]
-
-        return train_x, train_y, test_x, test_y, np.array(dataset, dtype=float)[:, :-1],  np.array(dataset, dtype=float)[:, -1]
 
 class DMC:
 
-    def __init__(self, X, Y):
-        self.X = X
-        self.Y = Y
+    def __init__(self, dataset_name):
+        self.dataset_name = dataset_name
 
-    def fit(self, train_X, train_Y):
 
-        self.train_x = train_X
-        self.train_y = train_Y
+    def load_data(self):
+
+        with open(self.dataset_name) as f:
+
+            dataset = []
+            categories = []
+
+            for line in f.readlines():
+
+                input = line.split(",")
+
+                if input[-1] not in categories:
+                    categories.append(input[-1])
+
+                input[-1] = list(categories).index(input[-1])
+                dataset.append(input)
+
+            normalized_dataset = np.array(dataset, dtype=float)
+
+            number_of_columns = len(dataset[0])
+            for column in range(number_of_columns - 1):
+                current_column = normalized_dataset[:, column]
+                max_of_column = float(max(current_column))
+                min_of_column = float(min(current_column))
+
+                for index in range(len(dataset)):
+                    value = dataset[index][column]
+                    dataset[index][column] = (float(value) - min_of_column) / (max_of_column - min_of_column)
+
+            self.dataset = dataset
+
+    def fit(self):
+
+        random.shuffle(self.dataset)
+
+        split_point = round(len(self.dataset)*0.8)
+
+        train = np.array(self.dataset)[split_point:, :]
+        test = np.array(self.dataset)[:split_point, :]
+
+        self.train_x = train[:, :-1]
+        self.train_y = train[:, -1]
+        self.test_x = test[:, :-1]
+        self.test_y = test[:, -1]
 
         self.centroids_trainning = {}
         centroids = {}
 
-        for index, x_value in enumerate(train_X):
+        for index, x_value in enumerate(self.train_x):
 
-            category = train_Y[index]
+            category = self.train_y[index]
 
             if category in centroids:
                 centroids[category].append(x_value)
@@ -106,30 +91,40 @@ class DMC:
             values = centroids[key]
             self.centroids_trainning[key] = sum(values) / len(values)
 
-    def test(self, x_test, y_test):
-
-        self.test_x = x_test
-        self.test_y = y_test
+    def test(self):
 
         results = []
+
+        confusion_matrix = {}
 
         number_of_corrects = 0
         number_of_errors = 0
 
 
-        for index, input in enumerate(x_test):
+        for index, input in enumerate(self.test_x):
 
             closest_distance = 99999999999999999
-            closest_key = 0
+            closest_key = int(0)
 
-            desired = y_test[index]
+            desired = int(self.test_y[index])
 
             for key in self.centroids_trainning.keys():
 
                 distance = euclideanDistance(self.centroids_trainning[key], input)
                 if distance < closest_distance:
-                    closest_key = key
+                    closest_key = int(key)
                     closest_distance = distance
+
+
+            if desired in confusion_matrix:
+                if closest_key in confusion_matrix[desired]:
+                    confusion_matrix[desired][closest_key] += 1
+                else:
+                    confusion_matrix[desired][closest_key] = 1
+            else:
+                confusion_matrix[desired] = {closest_key: 1}
+
+
 
             if desired - closest_key == 0:
                 number_of_corrects += 1
@@ -166,12 +161,13 @@ class DMC:
 
         colors = [clear_red, clear_blue, clear_green]
         strong_colors = ['red', 'blue', '#2ECC71']
+        number_of_points = 100
 
-        for i in range(0, 100, 1):
-            for j in range(0, 100, 1):
+        for i in range(0, number_of_points, 1):
+            for j in range(0, number_of_points, 1):
 
-                x = i/100
-                y = j/100
+                x = i/number_of_points
+                y = j/number_of_points
                 value = int(self.predict([x, y]))
 
                 color = colors[value]
@@ -193,91 +189,7 @@ class DMC:
             plt.plot(input[0], input[1], 'ro', color=medium_colors[color_value])
 
 
-
-
-
         plt.show()
-
-        # for parameter in [parameter_combination[0]]:
-        #
-        #     background_arrange = np.arange(0, 1, 0.1)
-        #     print(list(itertools.combinations(background_arrange, 2)))
-        #
-        #
-        #
-        #     fig_size = plt.rcParams["figure.figsize"]
-        #     fig_size[0] = 7
-        #     fig_size[1] = 7
-        #     plt.rcParams["figure.figsize"] = fig_size
-        #
-        #     for index, value in enumerate(self.X):
-        #
-        #         colors = ['ro', 'bo', 'go']
-        #
-        #         # for index, key in enumerate(dataset_dict):
-        #
-        #         input = np.array(value)
-        #         y = np.array(self.Y)[index]
-        #
-        #         firstInput = input[parameter[0]]
-        #         secondInput = input[parameter[1]]
-        #
-        #         plt.plot(firstInput, secondInput, colors[int(y)])
-        #
-        #     plt.xlabel('Superficie de Decisão')
-        #     # plt.ylabel('Acurácia (%)')
-        #     import uuid
-        #     plt.show()
-        #     plt.close()
-
-
-datasets = ['Datasets/iris.data', 'Datasets/column.arff']
-# datasets = ['Datasets/iris.data']
-
-for dataset in datasets:
-
-    all_averages = []
-    all_deviations = []
-    ploted = False
-
-    for i in range(number_of_executions):
-
-        train_x, train_y, test_x, test_y, X, Y = read_database(dataset)
-        dmc = DMC(X, Y)
-
-        dmc.fit(train_x, train_y)
-
-        dmc.plot_decision_surface(train_x, train_y, test_x, test_y)
-
-        if not ploted:
-            ploted = True
-            dmc.plot_decision_surface()
-
-        averages, deviations = dmc.test(test_x, test_y)
-        all_averages.append(np.average(averages))
-        all_deviations.append(np.average(deviations))
-
-    plt.title('Resultados do DMC no %s' % dataset)
-    fig_size = plt.rcParams["figure.figsize"]
-    fig_size[0] = 18
-    fig_size[1] = 7
-    plt.rcParams["figure.figsize"] = fig_size
-
-    plt.subplot(1, 2, 1)
-    plt.plot(range(len(all_averages)), np.array(all_averages), 'ro-')
-    plt.xlabel('Execuções')
-    plt.ylabel('Acurácia (%)')
-
-    plt.subplot(1, 2, 2)
-    plt.plot(range(len(all_deviations)), np.array(all_deviations) * 10, 'bo-')
-    plt.xlabel('Execuções')
-    plt.ylabel('Desvio padrão (%)')
-
-    print("a acurácia média para o dataset %s é %.2f, e o desvio padrão foi %.2f" % (
-        dataset, np.average(all_averages), np.average(all_deviations)))
-
-    plt.show()
-    plt.close()
 
 
 
