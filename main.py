@@ -1,10 +1,14 @@
 from KNN import *
 
+datasets = ['Datasets/artificial.data', 'Datasets/iris.data', 'Datasets/column.arff']
 datasets = ['Datasets/iris.data', 'Datasets/column.arff']
 
 for dataset in datasets:
-    knn = KNN(datasets[0])
+    knn = KNN(dataset)
 
     knn.load_data()
     knn.split_train_test_validation()
-    knn.train(number_of_epochs=0)
+    averages, deviations = knn.train(number_of_realizations=25)
+    knn.plot_decision_surface()
+
+    print("para o dataset %s tivermos uma acurácia de %.2f e um desvio padrão de %.2f" % (dataset, averages, deviations))
